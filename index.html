@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>For You ♥</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     COLOR PALETTE — edit these to reskin the whole page
+     ============================================================ */
+  :root {
+    --cream: #fdf6f0;   /* page background */
+    --soft:  #f9eae4;   /* card / photo fill */
+    --blush: #f5d5d5;   /* soft borders, accents */
+    --rose:  #d97a7a;   /* main accent */
+    --deep:  #8b3a3a;   /* headings */
+    --ink:   #3a2020;   /* body text */
+    --gold:  #c9a961;   /* dates, small labels */
+    --display: 'Playfair Display', Georgia, serif;
+    --body:    'Cormorant Garamond', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--body);
+    background: var(--cream);
+    color: var(--ink);
+    font-size: 1.05rem;
+    line-height: 1.7;
+    overflow-x: hidden;
+    opacity: 0;
+    transition: opacity 0.9s ease;
+  }
+  body.loaded { opacity: 1; }
+
+  /* ---------- PRELOADER ---------- */
+  .preloader {
+    position: fixed; inset: 0;
+    background: var(--cream);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+    transition: opacity 0.7s ease, visibility 0.7s;
+  }
+  .preloader.done { opacity: 0; visibility: hidden; }
+  .preloader .beat { color: var(--rose); font-size: 3rem; animation: beat 1s infinite; }
+  @keyframes beat { 0%,100% { transform: scale(1); } 50% { transform: scale(1.25); } }
+
+  /* ---------- HERO ---------- */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    position: relative; text-align: center; padding: 2rem;
+  }
+  .hero .for {
+    font-family: var(--body); font-style: italic; color: var(--rose);
+    font-size: 1.4rem; letter-spacing: 4px; margin-bottom: 0.5rem;
+  }
+  .hero h1 {
+    font-family: var(--display); font-weight: 400; font-style: italic;
+    font-size: clamp(3rem, 10vw, 6rem);
+    color: var(--deep); letter-spacing: 1px; margin-bottom: 1.5rem;
+  }
+  .hero .subtitle {
+    font-family: var(--body); font-style: italic; font-size: 1.4rem;
+    color: var(--ink); max-width: 480px; margin-bottom: 2.5rem; line-height: 1.5;
+  }
+  .counter {
+    border-top: 1px solid var(--blush); border-bottom: 1px solid var(--blush);
+    padding: 1.3rem 2.5rem; margin-bottom: 2.5rem;
+  }
+  .counter .num {
+    font-family: var(--display); font-style: italic; font-size: 3rem;
+    color: var(--deep); line-height: 1;
+  }
+  .counter .label {
+    font-family: var(--body); font-size: 1rem; color: var(--gold);
+    letter-spacing: 4px; text-transform: lowercase; margin-top: 0.5rem;
+  }
+  .scroll-hint {
+    position: absolute; bottom: 2rem; font-family: var(--body);
+    font-size: 1.05rem; font-style: italic; color: var(--rose);
+    letter-spacing: 2px; animation: bounce 2s infinite;
+  }
+  @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+  /* floating hearts */
+  .floating-heart {
+    position: absolute; color: var(--blush); font-size: 1.5rem;
+    animation: float 11s linear infinite; pointer-events: none; opacity: 0.5;
+  }
+  @keyframes float {
+    0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+    10% { opacity: 0.5; } 90% { opacity: 0.5; }
+    100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+  }
+
+  /* ---------- SECTIONS ---------- */
+  section { padding: 5rem 2rem; max-width: 880px; margin: 0 auto; }
+  section h2 {
+    font-family: var(--display); font-style: italic; font-weight: 400;
+    font-size: 2.8rem; color: var(--deep); text-align: center; margin-bottom: 0.6rem;
+  }
+  .flourish { text-align: center; color: var(--rose); letter-spacing: 8px; margin-bottom: 2.5rem; }
+  .tap-hint {
+    text-align: center; font-family: var(--body); font-style: italic;
+    color: var(--rose); font-size: 1.15rem; margin-bottom: 2.5rem;
+  }
+
+  /* ---------- SCROLL REVEAL (scoped so it can't affect the letter) ---------- */
+  .memory.reveal, .photo-item.reveal { opacity: 0; transition: opacity 0.8s ease; }
+  .memory.revealed, .photo-item.revealed { opacity: 1; }
+
+  /* ---------- TIMELINE ---------- */
+  .timeline { position: relative; padding-left: 2.5rem; }
+  .timeline::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 1px; background: var(--blush);
+  }
+  .memory {
+    position: relative; margin-bottom: 2.5rem; padding: 1.6rem 1.6rem 1.6rem 1.8rem;
+    background: var(--soft); border-radius: 8px;
+  }
+  .memory::before {
+    content: ''; position: absolute; left: -3rem; top: 1.7rem;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--cream); border: 2px solid var(--rose);
+  }
+  .memory .date {
+    font-family: var(--body); font-size: 0.9rem; color: var(--gold);
+    text-transform: uppercase; letter-spacing: 3px; margin-bottom: 0.5rem;
+  }
+  .memory .title {
+    font-family: var(--display); font-style: italic; font-size: 1.6rem;
+    color: var(--deep); margin-bottom: 0.7rem; padding-right: 2.5rem;
+  }
+  .memory .body { font-family: var(--body); font-size: 1.2rem; color: var(--ink); line-height: 1.6; }
+  .memory .mark {
+    position: absolute; top: 1.3rem; right: 1.3rem;
+    background: none; border: none; color: var(--blush);
+    font-size: 1.6rem; cursor: pointer; transition: transform 0.3s, color 0.3s;
+    line-height: 1;
+  }
+  .memory .mark:hover { transform: scale(1.2); color: var(--rose); }
+  .memory .mark.marked { color: var(--rose); animation: pop 0.4s; }
+  @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.5); } 100% { transform: scale(1); } }
+
+  .progress {
+    text-align: center; margin-top: 3rem; font-family: var(--body);
+    color: var(--rose); font-size: 1.25rem; letter-spacing: 2px; font-style: italic;
+  }
+
+  /* ---------- GALLERY (balanced 3×2) ---------- */
+  .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem 1.2rem; }
+  .photo-item { display: flex; flex-direction: column; margin: 0; }
+  .caption {
+    font-family: var(--body); font-style: italic; color: var(--rose);
+    text-align: center; font-size: 1.05rem; line-height: 1.4; margin-top: 0.7rem;
+  }
+  .photo {
+    aspect-ratio: 9 / 16; background: var(--soft);
+    border: 1px solid var(--blush); border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--rose); overflow: hidden; cursor: pointer;
+    transition: box-shadow 0.3s;
+  }
+  .photo:hover { box-shadow: 0 8px 22px rgba(139, 58, 58, 0.15); }
+  .photo .ph { font-size: 2rem; opacity: 0.4; }
+  .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* ---------- LETTER (unlocks after all memories marked) ---------- */
+  .letter-section {
+    max-height: 0; overflow: hidden; opacity: 0;
+    transition: max-height 1.4s ease, opacity 1s ease;
+  }
+  .letter-section.unlocked { max-height: 4000px; opacity: 1; }
+  .letter {
+    background: var(--soft); padding: 3.5rem 3rem; max-width: 640px; margin: 0 auto;
+    border-radius: 4px; position: relative; border: 1px solid var(--blush);
+    box-shadow: 0 10px 40px rgba(139, 58, 58, 0.12);
+  }
+  .letter::before {
+    content: '♥'; position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+    background: var(--cream); color: var(--rose); padding: 0 1rem; font-size: 1.4rem;
+  }
+  .letter h3 {
+    font-family: var(--display); font-style: italic; font-weight: 400;
+    color: var(--deep); font-size: 2rem; margin-bottom: 1.8rem; text-align: center;
+  }
+  .letter p {
+    font-family: var(--body); font-size: 1.28rem; color: var(--ink);
+    margin-bottom: 1.1rem; line-height: 1.7;
+    opacity: 0; transform: translateY(12px);
+    transition: opacity 0.9s ease, transform 0.9s ease;
+  }
+  .letter.reveal p { opacity: 1; transform: translateY(0); }
+  .letter p:nth-of-type(1) { transition-delay: 0.2s; }
+  .letter p:nth-of-type(2) { transition-delay: 0.6s; }
+  .letter p:nth-of-type(3) { transition-delay: 1.0s; }
+  .letter p:nth-of-type(4) { transition-delay: 1.4s; }
+  .letter .signoff {
+    font-family: var(--display); font-style: italic; color: var(--rose);
+    text-align: right; font-size: 1.35rem; margin-top: 2rem;
+    opacity: 0; transition: opacity 0.9s ease; transition-delay: 1.8s;
+  }
+  .letter.reveal .signoff { opacity: 1; }
+
+  /* ---------- LIGHTBOX ---------- */
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(46, 26, 26, 0.9);
+    display: none; align-items: center; justify-content: center;
+    z-index: 250; padding: 2rem; cursor: pointer;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 90%; max-height: 90vh; border-radius: 4px; }
+
+  /* ---------- MUSIC TOGGLE ---------- */
+  .music-btn {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    background: var(--soft); border: 1px solid var(--blush); color: var(--rose);
+    width: 46px; height: 46px; border-radius: 50%; cursor: pointer;
+    font-size: 1rem; z-index: 50;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.3s; box-shadow: 0 4px 12px rgba(139, 58, 58, 0.15);
+  }
+  .music-btn:hover { transform: scale(1.1); }
+
+  /* ---------- HEART BURST ---------- */
+  .burst-heart {
+    position: fixed; color: var(--rose); font-size: 1.5rem;
+    pointer-events: none; z-index: 300; animation: burst 1.5s ease-out forwards;
+  }
+  @keyframes burst {
+    0% { transform: translate(0,0) scale(0.5); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(1.2); opacity: 0; }
+  }
+
+  /* ---------- FOOTER ---------- */
+  footer {
+    text-align: center; padding: 3rem 2rem;
+    color: var(--rose); font-family: var(--body); font-style: italic; font-size: 1.1rem;
+  }
+
+  /* ---------- MOBILE ---------- */
+  @media (max-width: 600px) {
+    .gallery { grid-template-columns: repeat(2, 1fr); gap: 0.9rem; }
+    .letter { padding: 2.2rem 1.6rem; }
+    .memory { padding: 1.3rem; }
+    section { padding: 3.5rem 1.3rem; }
+    .counter .num { font-size: 2.3rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- PRELOADER -->
+<div class="preloader" id="preloader"><div class="beat">♥</div></div>
+
+<!-- HERO -->
+<section class="hero">
+  <div id="hearts-container"></div>
+  <div class="for">for</div>
+  <h1>Thinu</h1>
+  <div class="subtitle">a small thing i made, for a person i love very much</div>
+  <div class="counter">
+    <div class="num" id="days">—</div>
+    <div class="label">days of you and me</div>
+  </div>
+  <div class="scroll-hint">scroll ↓</div>
+</section>
+
+<!-- OUR STORY -->
+<section>
+  <h2>Our story</h2>
+  <div class="flourish">· · ·</div>
+  <div class="tap-hint">tap the ♡ beside each memory</div>
+  <div class="timeline">
+
+    <div class="memory">
+      <button class="mark" data-id="1" aria-label="Mark memory">♡</button>
+      <div class="date">Day one · May 2024</div>
+      <div class="title">The day we met</div>
+      <div class="body">It all began in the physics class in Nugegoda, sometime in May 2024. I wish I could remember the exact date, but I guess the most important moments don't always come with perfect memories. I was sitting at the back of the classroom, while you were sitting a few tables away. We didn't talk that day, but I remember noticing you. I can't remember exactly what you were wearing, but I still remember seeing you during the interval. You were outside the classroom with your friend, having a drink while your mom was waiting nearby. At the time, it felt like just another ordinary physics lesson. Neither of us knew that we had just met someone who would eventually become such an important part of our lives. Looking back now, it's amazing how something so simple—a classroom, a few tables between us, and a day that seemed completely ordinary became the very first page of our story. If I had known then where life would take us, I think I would have smiled a little longer that day.</div>
+    </div>
+
+    <div class="memory">
+      <button class="mark" data-id="2" aria-label="Mark memory">♡</button>
+      <div class="date">13 September 2025</div>
+      <div class="title">Our first date</div>
+      <div class="body">Our first real date was on 13 September 2025, a day I had been looking forward to for months. It wasn't just our first date, it was the first time we could finally meet after finishing our A/Ls and, more importantly, after finally receiving permission from your parents. Getting to that day wasn't easy. In the beginning, your parents weren't comfortable with our relationship and asked us to stop twice. Even though it was difficult, we never gave up on each other. We stayed patient, respected their concerns, and eventually earned their trust. Looking back, I'm proud that we chose patience instead of giving up, because it made that day even more meaningful. You were working with Mogo Media Academy at the Education Expo in BMICH, so I came there to see you. It was such a simple day, but every moment felt special because we could finally spend time together without hiding. One of my favorite memories is us buying noodles. I kept saying I wasn't hungry and to be fair, I don't even usually eat noodles but somehow you convinced me. Then you smiled and fed me a spoonful yourself. It's such a small moment, but it's one I'll never forget. A few days earlier had been your birthday, and although we couldn't celebrate it together because we still didn't have permission to meet, I was finally able to give you the little gift I got for you. That made me happier than I can explain. It was also the day you met my parents for the first time, making an already unforgettable day even more special. When I think about our first date, I don't remember a fancy place or an expensive meal. I remember finally being able to be with you, knowing that everything we had waited for had been worth it.</div>
+    </div>
+
+    <div class="memory">
+      <button class="mark" data-id="3" aria-label="Mark memory">♡</button>
+      <div class="date">22 June 2024</div>
+      <div class="title">A favorite memory</div>
+      <div class="body">If there's one day that will always have a special place in my heart, it's 22 June 2024. What started as an ordinary Saturday at our maths class became the day we now celebrate as our anniversary—the day our story truly began, we were both wearing black that day. During the interval, we walked out to the balcony together. Everything was still so new, and I remember feeling a little awkward because we were only at the beginning of our relationship. Looking back now, it's funny to think how nervous I was, especially knowing how comfortable we are with each other today. That day gave us some of our very first memories together. We took our first picture as a couple, a photo I'll always treasure because it captured the beginning of everything. I also gave you the first ring I had ever bought for you. Then came the moment we still laugh about today. You asked me to put it on your finger, and without having the slightest idea which finger it was supposed to go on, I confidently slipped it onto your middle finger. I was completely clueless, but somehow that made the moment even more unforgettable. When I look back on that day, I don't just remember the balcony, the photo, or the ring. I remember the excitement of knowing that something beautiful was beginning. It's the day we now celebrate every year, and I'm so grateful that an ordinary maths class turned into the start of the most meaningful chapter of my life.</div>
+    </div>
+
+    <div class="memory">
+      <button class="mark" data-id="4" aria-label="Mark memory">♡</button>
+      <div class="date">Today</div>
+      <div class="title">And here we are</div>
+      <div class="body">Looking back at everything we've been through, I realize our story was never perfect but that's what makes it ours. There was a time that I hurt you deeply. It's something I'll always regret, and it's a part of our story that I'll never take lightly. Even so, you found the strength to stay with me and I'll always be grateful for the trust and love you chose to place in me again. That second chance is something I promise never to take for granted. Since then, we've continued writing new memories together. Some of my happiest moments have been the simple ones, spending time at your home, watching movies together, enjoying the amazing meals you and your mom made, ordering food on lazy evenings, and feeling more and more like part of your family. We celebrated our anniversary on 28 June 2026. Even though we couldn't meet on the actual day, it couldn't have been more special. We spent the morning at OGF, enjoyed lunch at Breeze Barracuda, took some of my favorite photos of us, and celebrated with the beautiful cake your best friend made. I loved giving you the bouquet, and I'll always treasure the thoughtful card and gift you gave me. You also made my birthday unforgettable with the beautiful framed photo you gave me. Every time I see it hanging in my house, it reminds me of you and how lucky I am to have you in my life. One of my favorite recent memories is our first family dinner together with both of our parents. Sitting around the same table, laughing, talking, and enjoying the evening together felt like a moment we'd both been waiting for. And now we're even working on ourselves together. Since joining Lifetime Fitness, we've been encouraging each other, staying consistent, and growing stronger side by side. Watching us improve together has reminded me that we're not just building healthier bodies, we're building a healthier future together. Happy Girlfriend's Day, my love. Thank you for every laugh, every memory, every lesson, and every chance we've shared. No matter what comes next, I hope we continue choosing each other, supporting one another, and creating memories we'll look back on with the same smiles we have today. ❤️</div>
+    </div>
+
+  </div>
+  <div class="progress" id="progress">0 of 4 ♥</div>
+</section>
+
+<!-- GALLERY -->
+<section>
+  <h2>Us, in pictures</h2>
+  <div class="flourish">· · ·</div>
+  <div class="gallery">
+    <!-- Photos load from a folder named "photos" next to this file.
+         To add a caption under any photo, put text between the figcaption tags, e.g.
+         <figcaption class="caption">our first trip</figcaption> -->
+    <figure class="photo-item">
+      <div class="photo"><img src="photos/1.jpg" alt=""></div>
+    </figure>
+    <figure class="photo-item">
+      <div class="photo"><img src="photos/2.jpg" alt=""></div>
+    </figure>
+    <figure class="photo-item">
+      <div class="photo"><img src="photos/3.jpg" alt=""></div>
+    </figure>
+    <figure class="photo-item">
+      <div class="photo"><img src="photos/4.jpg" alt=""></div>
+    </figure>
+    <figure class="photo-item">
+      <div class="photo"><img src="photos/5.jpg" alt=""></div>
+    </figure>
+    <figure class="photo-item">
+      <div class="photo"><img src="photos/6.jpg" alt=""></div>
+    </figure>
+  </div>
+</section>
+
+<!-- LETTER (hidden until all 4 memories are marked) -->
+<section class="letter-section" id="letterSection">
+  <h2>A letter</h2>
+  <div class="flourish">· · ·</div>
+  <div class="letter" id="letter">
+    <h3>For you, my love ♥</h3>
+    <p>If you're reading this, it means you've unlocked the final page of our little story. Looking back through all these memories reminded me of how incredible our journey has been. From two strangers sitting a few tables apart in a physics class, to celebrating anniversaries, meeting each other's families, going to the gym together, and dreaming about our future, it still amazes me how far we've come.</p>
+    <p>Not every chapter of our story has been easy. There were moments that tested us in ways I never imagined. I did things that hurt you, and I know there are things I can never erase. But through all of it, you chose to believe that our story was worth fighting for. That second chance you gave me is something I'll never stop being grateful for, and it's a gift I'll spend every day trying to deserve. Thank you for believing in us when things weren't easy. Thank you for every laugh we've shared, every long conversation, every hug that made everything feel okay, every movie night at your house, every meal we enjoyed together, every gift you've given me, every photo we've taken, and every little moment that became a memory I'll carry forever.</p>
+    <p>Thank you for welcoming me into your family and allowing me to feel at home whenever I'm with you. Some of my happiest memories aren't from big celebrations, they're the quiet evenings watching movies, eating together, talking about random things, and simply enjoying your company. This past year has shown me that love isn't just about the happiest days. It's about choosing each other on the difficult ones too. It's about growing together, learning together, and becoming better people together. Watching us support each other in the gym, celebrate milestones, and slowly build the life we've always talked about makes me so excited for everything that's still ahead of us.</p>
+    <p>I don't know exactly what our future will look like, but I do know one thing. I want more ordinary days with you. More birthdays, More anniversaries, More movie nights, More family dinners, More gym sessions where we encourage each other, More little adventures, More photos we'll laugh at years from now, More memories that one day we'll tell our children about. Thank you for loving me, for standing beside me, and for making my life brighter simply by being in it. Happy Girlfriend's Day, my love. No matter how many memories we've already made, my favorite part of our story is knowing that we're still writing it. I love you more than words on a screen could ever fully express.</p>
+    <div class="signoff">— yours, always<br>Thisal</div>
+  </div>
+</section>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox"><img src="" alt="" id="lightboxImg"></div>
+
+<!-- MUSIC TOGGLE — drop a file named song.mp3 in this folder to use it -->
+<button class="music-btn" id="musicBtn" aria-label="Toggle music">♪</button>
+<audio id="bgMusic" loop>
+  <source src="song.mp3" type="audio/mpeg">
+</audio>
+
+<footer>made with ♥ · august 2026</footer>
+
+<script>
+  // ---------- PRELOADER ----------
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      document.getElementById('preloader').classList.add('done');
+      document.body.classList.add('loaded');
+    }, 700);
+  });
+
+  // ---------- DAYS COUNTER ----------
+  // CHANGE THIS to your first date / anniversary (format: 'YYYY-MM-DD')
+  var startDate = new Date('2024-06-22');
+  var days = Math.floor((Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  document.getElementById('days').textContent = days.toLocaleString();
+
+  // ---------- FLOATING HEARTS ----------
+  var container = document.getElementById('hearts-container');
+  setInterval(function () {
+    var h = document.createElement('div');
+    h.className = 'floating-heart';
+    h.textContent = '♥';
+    h.style.left = (Math.random() * 100) + '%';
+    h.style.animationDuration = (9 + Math.random() * 8) + 's';
+    h.style.fontSize = (1 + Math.random() * 1.5) + 'rem';
+    container.appendChild(h);
+    (function (el) { setTimeout(function () { el.remove(); }, 17000); })(h);
+  }, 1000);
+
+  // ---------- SCROLL REVEAL ----------
+  var revealEls = document.querySelectorAll('.memory, .photo-item');
+  for (var r = 0; r < revealEls.length; r++) { revealEls[r].classList.add('reveal'); }
+  if ('IntersectionObserver' in window) {
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { en.target.classList.add('revealed'); obs.unobserve(en.target); }
+      });
+    }, { threshold: 0.15 });
+    for (var o = 0; o < revealEls.length; o++) { obs.observe(revealEls[o]); }
+  } else {
+    for (var f = 0; f < revealEls.length; f++) { revealEls[f].classList.add('revealed'); }
+  }
+
+  // ---------- MEMORY MARKING (unlock the letter) ----------
+  var marks = document.querySelectorAll('.mark');
+  var progress = document.getElementById('progress');
+  var letterSection = document.getElementById('letterSection');
+  var letter = document.getElementById('letter');
+  var marked = {};
+  var markedCount = 0;
+
+  for (var m = 0; m < marks.length; m++) {
+    marks[m].addEventListener('click', function () {
+      var id = this.getAttribute('data-id');
+      if (marked[id]) return;
+      marked[id] = true;
+      markedCount++;
+      this.textContent = '♥';
+      this.classList.add('marked');
+      progress.textContent = markedCount + ' of 4 ♥';
+      if (markedCount === 4) {
+        setTimeout(function () {
+          letterSection.classList.add('unlocked');
+          setTimeout(function () {
+            letter.classList.add('reveal');
+            heartBurst();
+            letterSection.scrollIntoView({ behavior: 'smooth' });
+          }, 500);
+        }, 700);
+      }
+    });
+  }
+
+  // ---------- HEART BURST ----------
+  function heartBurst() {
+    for (var i = 0; i < 20; i++) {
+      var h = document.createElement('div');
+      h.className = 'burst-heart';
+      h.textContent = '♥';
+      h.style.left = '50%';
+      h.style.top = '50%';
+      var angle = (Math.PI * 2 * i) / 20;
+      var dist = 150 + Math.random() * 100;
+      h.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+      h.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+      document.body.appendChild(h);
+      (function (el) { setTimeout(function () { el.remove(); }, 1500); })(h);
+    }
+  }
+
+  // ---------- PHOTO LIGHTBOX ----------
+  var lightbox = document.getElementById('lightbox');
+  var lightboxImg = document.getElementById('lightboxImg');
+  var photos = document.querySelectorAll('.photo');
+  for (var p = 0; p < photos.length; p++) {
+    photos[p].addEventListener('click', function () {
+      var img = this.querySelector('img');
+      if (img) { lightboxImg.src = img.src; lightbox.classList.add('open'); }
+    });
+  }
+  lightbox.addEventListener('click', function () { lightbox.classList.remove('open'); });
+
+  // ---------- MUSIC TOGGLE ----------
+  var musicBtn = document.getElementById('musicBtn');
+  var music = document.getElementById('bgMusic');
+  var playing = false;
+  musicBtn.addEventListener('click', function () {
+    if (playing) {
+      music.pause();
+      musicBtn.textContent = '♪';
+      playing = false;
+    } else {
+      music.play().then(function () {
+        musicBtn.textContent = '❚❚';
+        playing = true;
+      }).catch(function () {
+        alert('Add a music file named song.mp3 to the same folder to enable music.');
+      });
+    }
+  });
+</script>
+
+</body>
+</html>
